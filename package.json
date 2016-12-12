@@ -1,0 +1,44 @@
+{
+  "name": "cs-mb-controller",
+  "version": "0.0.1",
+  "description": "Control Solutions MODBUS Controller Utilities",
+  "main": "index.js",
+  "scripts": {
+    "test": "make test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:csllc/cs-mb-controller.git"
+  },
+  "keywords": [
+    "Control",
+    "Solutions",
+    "Controller",
+    "CS8100"
+  ],
+  "author": "Bill Glase <bglase@controls.com> (http://wwww.controls.com/)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/csllc/cs-8100-util/issues"
+  },
+  "homepage": "https://github.com/csllc/cs-mb-controller",
+  "dependencies": {
+    "bluebird": "^3.3.0",
+    "cs-modbus": "csllc/cs-modbus.git",
+    "h5.buffers": "^0.1.1"
+  },
+  "devDependencies": {
+    "blessed": "^0.1.81",
+    "blessed-contrib": "^2.4.1",
+    "chai": "^3.3.0",
+    "chalk": "^1.1.0",
+    "commander": "^2.8.1",
+    "jshint": "^2.8.0",
+    "minimist": "^1.2.0",
+    "mocha": "^2.3.4",
+    "noble": "^1.7.0",
+    "serialport": "^4.0.6",
+    "socket.io": "^1.4.5",
+    "underscore": "^1.8.3"
+  }
+}

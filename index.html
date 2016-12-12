@@ -1,0 +1,863 @@
+<!doctype html>
+<html>
+  <head>
+    <title>ACN Monitor</title>
+
+    <!-- Latest compiled and minified CSS -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
+
+    <!-- Optional theme -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap-theme.min.css" integrity="sha384-fLW2N01lMqjakBkx3l/M9EahuwpSfeNvV63J5ezn3uZzapT0u7EYsXMjQV+0En5r" crossorigin="anonymous">
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="http://code.jquery.com/jquery-1.11.1.js"></script>
+
+    <!-- Latest compiled and minified JavaScript -->
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" integrity="sha384-0mSbJDEHialfmuBBQP6A4Qrprq5OVfW37PRR3j5ELqxss1yVqOtnepnHVP9aJ7xS" crossorigin="anonymous"></script>
+
+    <!-- JQUERY FLOT charting library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/flot/0.8.3/jquery.flot.min.js" crossorigin="anonymous"></script>
+
+
+
+    <style>
+
+      /* Move down content because we have a fixed navbar that is 50px tall */
+      body {
+        padding-top: 50px;
+      }
+
+      /* Underline the sub-header text */
+      .sub-header {
+        padding-bottom: 10px;
+        border-bottom: 1px solid #eee;
+      }
+
+      .status-dot {
+
+          height: 50px;
+          width: 50px;
+          text-align: center;
+          -moz-border-radius:25px;
+          -webkit-border-radius: 25px;
+      }
+
+      .status-dot i {
+          color: #0;
+          font-size: 20px;
+          line-height: 50px;
+      }
+
+      /*
+       * Top navigation
+       * Hide default border to remove 1px line.
+       */
+      .navbar-fixed-top {
+        border: 0;
+      }
+
+      /*
+       * Sidebar
+       */
+      /* Hide for mobile, show later */
+      .sidebar {
+        display: none;
+      }
+
+      @media (min-width: 768px) {
+        .sidebar {
+          position: fixed;
+          top: 51px;
+          bottom: 0;
+          left: 0;
+          z-index: 1000;
+          display: block;
+          padding: 20px;
+          overflow-x: hidden;
+          overflow-y: auto;
+          background-color: #f5f5f5;
+          border-right: 1px solid #eee;
+        }
+      }
+
+
+      /* Sidebar navigation */
+      .nav-sidebar {
+        margin-right: -21px; /* 20px padding + 1px border */
+        margin-bottom: 20px;
+        margin-left: -20px;
+      }
+      .nav-sidebar > li > a {
+        padding-right: 20px;
+        padding-left: 20px;
+      }
+      .nav-sidebar > .active > a,
+      .nav-sidebar > .active > a:hover,
+      .nav-sidebar > .active > a:focus {
+        color: #fff;
+        background-color: #428bca;
+      }
+
+
+      /*
+       * Main content
+       */
+
+      .main {
+        padding: 20px;
+      }
+      @media (min-width: 768px) {
+        .main {
+          padding-right: 40px;
+          padding-left: 40px;
+        }
+      }
+      .main .page-header {
+        margin-top: 0;
+      }
+
+      </style>
+
+  </head>
+  <body>
+
+<body>
+
+    <nav class="navbar navbar-inverse navbar-fixed-top">
+      <div class="container-fluid">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="#"></a>
+        </div>
+        <div id="navbar" class="navbar-collapse collapse">
+          <ul class="nav navbar-nav navbar-right">
+            <li><a href="#">Dashboard</a></li>
+            <!-- <li><a href="#">Settings</a></li>
+            <li><a href="#">Profile</a></li>
+            <li><a href="#">Help</a></li> -->
+          </ul>
+        </div>
+      </div>
+    </nav>
+
+    <div class="container-fluid">
+      <div class="row">
+        <div class="col-sm-3 col-md-2 sidebar">
+          <ul class="nav nav-sidebar">
+            <li class="active"><a href="#">Overview <span class="sr-only">(current)</span></a></li>
+            <!-- <li><a href="#">Reports</a></li>
+            <li><a href="#">Analytics</a></li>
+            <li><a href="#">Export</a></li> -->
+          </ul>
+          <div class="nav nav-sidebar">
+            <h3>Commands</h3>
+            <div class="col-lg-12 btn-group btn-group-vertical" role="group" >
+              <a href="#" class="btn btn-default" id="btn-clear" role="button">Clear</a>
+              <a href="#" class="btn btn-default" id="btn-pair" role="button">Pair</a>
+              <a href="#" class="btn btn-default" id="btn-reset" role="button">Reset</a>
+              <a href="#" class="btn btn-default" id="btn-scan" role="button" data-toggle="modal" data-target="#noiseModal">Channel Scan</a>
+            </div>
+          </div>
+          <div class="nav nav-sidebar">
+            <h3>Config</h3>
+            <ul class="list-group">
+              <li class="list-group-item">Modbus ID:<span class="pull-right" id="config-modbusSlaveId"></span></li>
+              <li class="list-group-item">Channels:<span class="pull-right" id="config-channelMap"></span></li>
+              <li class="list-group-item">TX Interval:<span class="pull-right" id="config-msBetweenStatusTx"></span></li>
+              <li class="list-group-item">PowerOff:<span class="pull-right" id="config-powerOffSec"></span></li>
+              <li class="list-group-item">Formation:<span class="pull-right" id="config-networkFormation"></span></li>
+              <li class="list-group-item">PairingTO:<span class="pull-right" id="config-pairingTimeout"></span></li>
+              <li class="list-group-item">Sw Defaults:<span class="pull-right" id="config-switchDefaults"></span></li>
+              <li class="list-group-item">MaxHops:<span class="pull-right" id="config-maxHops"></span></li>
+            </ul>
+          </div>
+          <div class="nav nav-sidebar">
+            <h3>Device</h3>
+            <ul class="list-group">
+              <li class="list-group-item">State:<span class="pull-right" id="device-state"></span></li>
+              <li class="list-group-item">Serial:<span class="pull-right" id="device-serial"></span></li>
+              <li class="list-group-item">Version:<span class="pull-right" id="device-version"></span></li>
+              <li class="list-group-item">Product:<span class="pull-right" id="device-product"></span></li>
+              <li class="list-group-item">Power:<span class="pull-right" id="device-power"></span></li>
+              <li class="list-group-item">Fault:<span class="pull-right" id="device-fault"></span></li>
+            </ul>
+          </div>
+        </div>
+        <div class="col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main">
+          <!-- <h1 class="page-header">Dashboard</h1> -->
+          <div class="row">
+            <div class="col-xs-6">
+              <h2 class="sub-header">Network</h2>
+                <ul class="list-group">
+                  <li class="list-group-item">Network ID:<span class="pull-right" id="network-id"></span></li>
+                  <li class="list-group-item">Channel:<span class="pull-right" id="network-channel"></span></li>
+                  <li class="list-group-item">Role:<span class="pull-right" id="network-role"></span></li>
+                  <li class="list-group-item">Short Address:<span class="pull-right" id="network-short"></span></li>
+                  <li class="list-group-item">Parent:<span class="pull-right" id="network-parent"></span></li>
+                </ul>
+            </div>
+            <div class="col-xs-6">
+              <h2 class="sub-header">Sensors</h2>
+                <ul class="list-group" id="sensorData">
+                </ul>
+            </div>
+          </div>
+
+          <div class="row">
+            <div class="col-lg-12">
+              <h2 class="sub-header">Inputs</h2>
+              <h3 class="text-center">Local</h3>
+              <ul class="thumbnails list-inline list-unstyled" id="localSwitches">
+              </ul>
+            </div>
+          </div>
+
+          <!-- Remote Status  -->
+          <div class="row">
+            <div class="col-lg-12">
+              <h3 class="text-center">Remote</h3>
+              <!-- <div class="row"> -->
+                <ul class="thumbnails list-inline list-unstyled" id="remoteSwitches">
+                </ul>
+              <!-- </div> -->
+            </div>
+
+            <!-- RSSI Bar  -->
+            <div class="row">
+              <div class="col-xs-1">
+                <span>RSSI:</span>
+              </div>
+
+              <div class="col-xs-11">
+                <div class="progress">
+                  <div class="progress-bar" role="progressbar" id="status-rssi" aria-valuenow="90" aria-valuemin="0" aria-valuemax="100" style="min-width: 2em;">
+                    <span id="status-rssi-val"></span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- LQI BAR  -->
+            <div class="row">
+              <div class="col-xs-1">
+                <span>LQI:</span>
+              </div>
+
+              <div class="col-xs-11">
+                <div class="progress">
+                  <div class="progress-bar" role="progressbar" id="status-lqi"  style="min-width: 2em;">
+                    <span id="status-lqi-val"></span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Signal level chart  -->
+            <div class="row">
+              <div class="col-xs-12 panel panel-default">
+
+                <div class="panel-body" id="chart-placeholder" style="height: 300px;"></div>
+              </div>
+            </div>
+            <!-- end of Signal level chart  -->
+
+          </div>
+          <!-- End of Remote Status -->
+
+          <!-- Connections Table -->
+          <div class="row">
+            <h2 class="sub-header">Connections</h2>
+            <div class="table-responsive">
+              <table class="table table-striped">
+                <thead>
+                  <tr>
+                    <th>Addr</th>
+                    <th>PAN</th>
+                    <th>Flags</th>
+                    <th>Extra</th>
+                    <th>MAC</th>
+                  </tr>
+                </thead>
+                <tbody id='connectionTable'>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="row">
+            <h2 class="sub-header">Routing Table</h2>
+            <div class="table-responsive">
+              <table class="table table-striped">
+                <thead>
+                  <tr>
+                    <th>To</th>
+                    <th>Next Hop</th>
+                    <th>Errors</th>
+                  </tr>
+                </thead>
+                <tbody id='routingTable'>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+
+          <div class="row">
+          </div>
+
+        </div>
+      </div>
+
+<!-- Button trigger modal -->
+<button type="button" class="btn btn-primary btn-lg" data-toggle="modal" data-target="#noiseModal">
+  Launch demo modal
+</button>
+
+      <!-- Noise scan Modal -->
+      <div class="modal fade" id="noiseModal" tabindex="-1" role="dialog" aria-labelledby="noiseModalLabel">
+        <div class="modal-dialog" role="document">
+          <div class="modal-content">
+            <div class="modal-header">
+              <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+              <h4 class="modal-title" id="noiseModalLabel">Channel Scan</h4>
+            </div>
+            <div class="modal-body">
+              <div id="noise-chart-placeholder" style="width:500px;height:300px"></div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+              <!-- <button type="button" class="btn btn-primary">Save changes</button> -->
+            </div>
+          </div>
+        </div>
+      </div>
+    <!-- Container  -->
+    </div>
+
+    <script>
+
+      var lastRssi = 0;
+      var lastLqi = 0;
+
+      var socket = io();
+
+      function UpdateDiscrete( element, values ) {
+        $(element).text('');
+
+        if( values && values.length > 11 ) {
+
+          var str = '';
+
+          for( var i = 11; i >= 0; i-- ) {
+
+            var icon;
+            var color;
+
+            if( values[i] ) {
+              icon = 'glyphicon-ok';
+              color = 'bg-success';
+            }
+            else {
+              icon = 'glyphicon-remove';
+              color = 'bg-warning';
+            }
+
+            str += '<li class="col-lg-1"><div class="thumbnail">';
+            str += '<div class="center-block status-dot ' + color + '">';
+            str += '<i class="text-center glyphicon ' + icon + '"></i>';
+            str += '</div>';
+            str += '<h3 class="text-center">' + i + '</h3>';
+
+            str += '</div>';
+            str += '</li>';
+
+          }
+          $(element).append(str);
+        }
+      }
+
+      $('#btn-clear').click(function (event)
+      {
+         event.preventDefault();
+
+         socket.emit('command', {action: 'clear'}, function(data) {
+
+         } );
+
+       });
+
+      $('#btn-pair').click(function (event)
+      {
+         event.preventDefault();
+
+         socket.emit('command', {action: 'pair'} , function(data) {
+
+         } );
+
+       });
+
+      $('#btn-reset').click(function (event)
+      {
+         event.preventDefault();
+
+         socket.emit('command', {action: 'reset'}, function(data) {
+
+         }  );
+
+      });
+
+      socket.on('device-connect', function(msg){
+        //console.log( msg);
+        msg.version = msg.version || '0.0.0';
+        msg.fault = msg.fault || '';
+        msg.run = msg.run || 0;
+        msg.productType = msg.productType || '';
+
+        msg.serialNumber  = msg.serialNumber || 'Unknown';
+        $('.navbar-brand').text( 'ACN Gateway #' + msg.serialNumber + ' Version '  + msg.version );
+        $('#device-serial').text( msg.serialNumber );
+        $('#device-product').text( msg.productType );
+        $('#device-version').text( msg.version );
+
+        var fault = (msg.run === 255) ?
+          '<span class="label label-success">None</span>'
+          : '<span class="label label-danger">' + msg.fault + ' </span>';
+        $('#device-fault').html( fault );
+
+      });
+
+      socket.on('device-disconnect', function(msg){
+        //console.log( msg);
+        $('.navbar-brand').text( 'Disconnected' );
+      });
+
+      /*
+       * Status update
+       */
+      socket.on('status', function(msg){
+        //console.log( msg);
+
+        UpdateDiscrete( '#localSwitches', msg.localSwitches );
+        UpdateDiscrete( '#remoteSwitches', msg.remoteSwitches );
+
+        lastRssi = msg.remoteQuality.rssi;
+        lastLqi = msg.remoteQuality.lqi;
+
+        $('#status-rssi').width( lastRssi * 100/255 + '%');
+        $('#status-lqi').width( lastLqi * 100/255 + '%');
+
+        $('#status-rssi-val').text( lastRssi );
+        $('#status-lqi-val').text( lastLqi );
+
+        $('#device-power').text( (msg.volts/10) + 'VDC' );
+        $('#device-state').text( msg.systemState );
+
+      });
+
+      socket.on( 'networkStatus', function(msg){
+        msg.shortAddress = msg.shortAddress || '';
+        msg.parent = msg.parent || '';
+        msg.panId = msg.panId || '';
+        msg.currentChannel = msg.currentChannel || '';
+
+        $('#network-parent').text(msg.parent);
+        $('#network-id').text(msg.panId);
+        $('#network-short').text(msg.shortAddress);
+        $('#network-channel').text(msg.currentChannel);
+
+        //console.log( msg);
+      });
+
+      socket.on( 'scanResult', function(msg){
+        console.log( msg);
+      });
+
+      socket.on( 'connectionTable', function(msg){
+        //console.log( msg);
+        $('#connectionTable').text('');
+
+        for( var i = 0; i< msg.length; i++ ) {
+          var flags = '';
+          if( !msg[i].status.rxOnWhenIdle )
+            flags += '<span class="label label-default">Sleep</span>';
+          else
+            flags += '<span class="label label-info">No Sleep</span>';
+
+          if( msg[i].status.directConnection )
+            flags += '<span class="label label-success">Direct</span>';
+          else
+            flags += '<span class="label label-info">Indirect</span>';
+
+          if( msg[i].status.finishJoin )
+            flags += '<span class="label label-success">Joined</span>';
+
+          if( msg[i].status.isFamily )
+            flags += '<span class="label label-success">Family</span>';
+
+          var str = '<tr>';
+          str += '<td>' + msg[i].altAddress + '</td>';
+          str += '<td>' + msg[i].panId + '</td>';
+          str += '<td>' + flags + '</td>';
+          str += '<td>' + msg[i].extra + '</td>';
+          str += '<td>' + msg[i].address + '</td>';
+
+          str += '</tr>';
+
+          $('#connectionTable').append(str);
+        }
+      });
+
+      socket.on( 'coordStatus', function(msg){
+        console.log( msg);
+
+        msg.role = msg.role || 'Unknown';
+        msg.route = msg.route || [];
+        msg.roleType = msg.roleType || '';
+
+        $('#network-role').text(msg.roleType);
+
+        $('#routingTable').text('');
+
+        for( var i = 0; i< msg.route.length; i++ ) {
+
+          var str = '<tr>';
+          str += '<td>' + msg.route[i].to + '</td>';
+          str += '<td>' + msg.route[i].nextHop + '</td>';
+          str += '<td>' + msg.route[i].errors + '</td>';
+
+          str += '</tr>';
+
+          $('#routingTable').append(str);
+        }
+
+      });
+
+      socket.on( 'sensorData', function(msg){
+        console.log( msg);
+
+        if( $("#sensorData li").length > 5 ) {
+          $('#sensorData li').first().remove();
+        }
+
+        var str = '<li class="list-group-item">';
+
+        // for zero padding
+        var pad = new Array(2).join( '0' );
+
+        str += JSON.stringify( msg.packet );
+        //for( var i = 0; i < msg.length; i++ ) {
+        //  str += (pad+msg.buf[i].toString(16).slice(-pad.length));
+        //  str += ' ';
+        //}
+        str += '</br>';
+        str += '<em>from: ' + msg.from.toString(16);
+        str += ' rssi: ' + msg.rssi;
+        str += ' lqi: ' + msg.lqi;
+        str += '</em>';
+
+        str += '</li>';
+
+        //var entry = document.createElement('li');
+        //entry.className = 'list-group-item';
+        //entry.appendChild(document.createTextNode(text));
+
+        $('#sensorData').append(str);
+
+
+/*
+        msg.role = msg.role || 'Unknown';
+        msg.route = msg.route || [];
+        msg.roleType = msg.roleType || '';
+
+        $('#network-role').text(msg.roleType);
+
+        $('#routingTable').text('');
+
+        for( var i = 0; i< msg.route.length; i++ ) {
+
+          var str = '<tr>';
+          str += '<td>' + msg.route[i].to + '</td>';
+          str += '<td>' + msg.route[i].nextHop + '</td>';
+          str += '<td>' + msg.route[i].errors + '</td>';
+
+          str += '</tr>';
+
+          $('#routingTable').append(str);
+        }
+        */
+      });
+
+      socket.on( 'config', function(msg){
+        console.log( msg);
+
+        Object.keys(msg).forEach(function (key) {
+          $('#config-'+key).text(msg[key]);
+          console.log( key );
+        });
+
+      });
+
+  //------------------------------//-------------------------------------------
+  // Signal level bar and rolling chart
+
+  var container = $("#chart-placeholder");
+
+  // Determine how many data points to keep based on the placeholder's initial size;
+  // this gives us a nice high-res plot while avoiding more than one point per pixel.
+
+  var maximum = container.outerWidth() / 2 || 300;
+
+
+  var rssidata = [];
+  var lqidata = [];
+
+  function pushRssi( value ) {
+
+    if (rssidata.length) {
+        rssidata = rssidata.slice(1);
+    }
+
+    while (rssidata.length < maximum) {
+        rssidata.push( value );
+    }
+
+    // zip the generated y values with the x values
+
+    var res = [];
+    for (var i = 0; i < rssidata.length; ++i) {
+        res.push([i, rssidata[i]])
+    }
+
+    return res;
+  }
+
+    function pushLqi( value ) {
+
+        if (lqidata.length) {
+            lqidata = lqidata.slice(1);
+        }
+
+        while (lqidata.length < maximum) {
+            lqidata.push( value );
+        }
+
+        // zip the generated y values with the x values
+
+        var res = [];
+        for (var i = 0; i < lqidata.length; ++i) {
+            res.push([i, lqidata[i]])
+        }
+
+        return res;
+    }
+
+    function getRandomData() {
+
+        if (data.length) {
+            data = data.slice(1);
+        }
+
+        while (data.length < maximum) {
+            var previous = data.length ? data[data.length - 1] : 50;
+            var y = previous + Math.random() * 10 - 5;
+            data.push(y < 0 ? 0 : y > 100 ? 100 : y);
+        }
+
+        // zip the generated y values with the x values
+
+        var res = [];
+        for (var i = 0; i < data.length; ++i) {
+            res.push([i, data[i]])
+        }
+
+        return res;
+    }
+
+  //
+
+
+  series = [{
+    data: pushRssi( 0),
+    lines: {
+      fill: true
+    }
+  },
+  {
+    data: pushLqi( 0),
+    lines: {
+      fill: true
+    }
+  }];
+
+  //
+
+  var plot = $.plot(container, series, {
+    grid: {
+      borderWidth: 1,
+      minBorderMargin: 20,
+      labelMargin: 10,
+      backgroundColor: {
+        colors: ["#fff", "#e4f4f4"]
+      },
+      margin: {
+        top: 8,
+        bottom: 20,
+        left: 20
+      },
+      markings: function(axes) {
+        var markings = [];
+        var xaxis = axes.xaxis;
+        for (var x = Math.floor(xaxis.min); x < xaxis.max; x += xaxis.tickSize * 2) {
+          markings.push({ xaxis: { from: x, to: x + xaxis.tickSize }, color: "rgba(232, 232, 255, 0.2)" });
+        }
+        return markings;
+      }
+    },
+    xaxis: {
+      tickFormatter: function() {
+        return "";
+      }
+    },
+    yaxis: {
+      min: 0,
+      max: 255
+    },
+    legend: {
+      show: false
+    }
+  });
+
+  // Create the demo X and Y axis labels
+
+  var yaxisLabel = $("<div class='axisLabel yaxisLabel'></div>")
+    .text("RSSI")
+    .appendTo(container);
+
+  // Since CSS transforms use the top-left corner of the label as the transform origin,
+  // we need to center the y-axis label by shifting it down by half its width.
+  // Subtract 20 to factor the chart's bottom margin into the centering.
+
+  yaxisLabel.css("margin-top", yaxisLabel.width() / 2 - 20);
+
+  // Update the random dataset at 25FPS for a smoothly-animating chart
+
+  setInterval(function updateRandom() {
+
+    series[0].data = pushRssi( lastRssi);
+    series[1].data = pushLqi( lastLqi );
+    plot.setData(series);
+    plot.draw();
+  }, 40);
+
+
+  //------------------------------//-------------------------------------------
+  // RSSI bar chart
+  //
+  var noisedataset = [{ label: "RSSI", data: [], color: "#5482FF" }];
+  var ticks = [[0, '11'], [1, '12'], [2, '13'], [3, '14'],[4, '15'], [5, '16'],
+    [6, '17'], [7, '18'], [8, '19'], [9, '20'],[10, '21'], [11, '22'],
+    [12, '23'], [13, '24'], [14, '25'], [15, '26']
+  ];
+
+  var noiseoptions = {
+      series: {
+          bars: {
+              show: true
+          }
+      },
+      bars: {
+          align: "center",
+          barWidth: 0.5
+      },
+      xaxis: {
+          axisLabel: "Channel",
+          axisLabelUseCanvas: true,
+          axisLabelFontSizePixels: 12,
+          axisLabelFontFamily: 'Verdana, Arial',
+          axisLabelPadding: 10,
+          ticks: ticks
+      },
+      yaxis: {
+          min:0, max: 255,  tickSize: 50,
+          axisLabel: 'RSSI',
+          axisLabelUseCanvas: true,
+          axisLabelFontSizePixels: 12,
+          axisLabelFontFamily: 'Verdana, Arial',
+          axisLabelPadding: 3,
+          tickFormatter: function (v, axis) {
+              return v + '';
+          }
+      },
+      legend: {
+          noColumns: 0,
+          labelBoxBorderColor: "#000000",
+          position: "nw"
+      },
+      grid: {
+          hoverable: true,
+          borderWidth: 2,
+          backgroundColor: { colors: ["#ffffff", "#EDF5FF"] }
+      }
+  };
+
+function updateNoisePlot( values ) {
+
+  var rssiSeries = [];
+
+  for( var i = 0; i < 16; i++ ) {
+    if( values && values[i] ) {
+      rssiSeries.push( [i, values[i] ]);
+    }
+    else {
+      rssiSeries.push( [i, 0 ]);
+    }
+  }
+
+  noisedataset[0].data = rssiSeries;
+  $.plot($("#noise-chart-placeholder"), noisedataset, noiseoptions);
+
+}
+
+  $(document).ready(function () {
+
+    updateNoisePlot( 0 );
+
+    var noiseScanning = false;
+
+    function doScan() {
+
+      socket.emit('command', {
+        action: 'scan',
+        type: 1,
+        duration: 8
+      }, function(data) {
+        updateNoisePlot( data );
+
+        if( noiseScanning ){
+          // run another scan pretty quick
+          noiseScanTimer = setTimeout( doScan, 500 );
+        }
+      });
+    }
+
+
+    $('#noiseModal').on('show.bs.modal', function (e) {
+      noiseScanning = true;
+      doScan();
+    });
+
+    $('#noiseModal').on('hide.bs.modal', function (e) {
+      noiseScanning = false;
+    });
+
+});
+  //------------------------------//-------------------------------------------
+
+      </script>
+  </body>
+</html>
