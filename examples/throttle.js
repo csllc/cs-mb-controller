@@ -1,8 +1,6 @@
 #!/usr/bin/env node
 /**
- * Example program that connects to a serial port and retrieves the SLAVE ID.
- * This is similar to the serial.js example, but hooks a lot of debug events
- * to print extra information about the transaction
+ * Example program that reads and writes the throttle configuration
  *
  */
 'use strict';
@@ -89,42 +87,44 @@ controller.on('connected', function() {
 			' Version ' + result.version +
 			' Serial# ' + result.serialNumber  );
 
-
+    // get the memory map according to the product type
 		var map = controller.createMap( result.productId );
 		
-		// Iterate through the entire map and read all the values
-		controller.read( map.eeprom )
-
+		// read the throttle settings
+		controller.read( map.ramConfig.throttle )
 		.then( function( result ) {
 
-			result.forEach( function( reg ) {
+      // extract the values
+      var settings = map.get( map.ramConfig.throttle );
+      console.log( 'original settings: ', settings );
 
-				map.fromRegister( reg );
-				//console.log( reg.title + ': ', reg.format() );
-				//console.log( reg.title + ': ', reg.value );
-			});
+      // update as needed by manipulating the value object
+      settings.deadband++;
 
-			console.log( 'Deadband: ', map.config.throttle.deadband.format() );
-			
+      // update the map
+      //map.set( map.config.throttle, settings );
 
-			
+      // or, by updating the map directly
+      map.config.throttle.deadband.set( settings.deadband );
+      map.ramConfig.throttle.deadband.set( settings.deadband );
+
+      // Write the updated throttle settings
+      return controller.write( [ map.ramConfig.throttle, map.config.throttle.deadband ] );
+ 			
 		})
-		/*
-		.then( function() {
+    .then( function() { 
 
-			return controller.read( map.ramConfig );
-			
-		})
-		.then( function( result ) {
+      // read the settings we just wrote, to make sure they were written
+      return  controller.read( map.config.throttle ); 
+    })
+    .then( function( result ) {
+      
+      // extract the values and print them
+      var settings = map.get( map.ramConfig.throttle );
+      console.log( 'Updated settings: ', settings );
 
-			result.forEach( function( reg ) {
-				console.log( reg.title + ': ', reg.format() );
-			});
-			
-
-			
-		})
-		*/
+      
+    })
 		.then( function() {
 
 			// exit the program

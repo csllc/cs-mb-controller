@@ -176,7 +176,7 @@ Port.prototype.readId = function() {
           }
 
           if( additional.length >= 8 ) {
-            additional.readUInt32BE(4); 
+            productId = additional.readUInt32BE(4); 
           }
 
           resolve( {
@@ -375,7 +375,11 @@ function buildRegisterList( mapItem, wrapFunc ) {
   return result;
 }
 
-
+/**
+ * Reads a register item from the slave
+ *
+ * @returns {Promise} that resolves when the read operation is complete
+ */
 Port.prototype.readRegister = function( reg ) {
 
   var me = this;
@@ -393,7 +397,7 @@ Port.prototype.readRegister = function( reg ) {
           reject( err );
         }
         else {
-
+          //console.log( 'resp: ', response );
           reg.setValue( response.values );
 
           resolve( reg );
@@ -404,16 +408,62 @@ Port.prototype.readRegister = function( reg ) {
       }
     };
 
-    //console.log( 'Reading register ', reg);
-    //console.log( ' seq ' + me.commandSequence );
-
    if( reg.type === 'object') {
      me.master.readObject( reg.addr, callback );
 
     }
     else {
       
+      //console.log( 'reading ' + reg.length + ' registers from 0x' + reg.addr.toString(16) );
       me.master.readHoldingRegisters( reg.addr, reg.length, callback );
+    }
+
+  });
+  
+
+};
+
+
+/**
+ * Writes a register item to the slave
+ *
+ * @returns {Promise} that resolves when the operation is complete
+ */
+Port.prototype.writeRegister = function( reg ) {
+
+  var me = this;
+
+  return new BPromise(function(resolve, reject){
+
+    var callback = {
+      onComplete: function(err, response ) {
+
+        if( response && response.exceptionCode ) {
+          // i'm not sure how to catch exception responses from the slave in a better way than this
+          err = new Error( 'Exception ' + response.exceptionCode );
+        }
+        if( err ) {
+          reject( err );
+        }
+        else {
+          //console.log( reg.title + ' write result: ', response );
+          resolve( reg );
+        }
+      },
+      onError: function( err ) {
+        reject( err );
+      }
+    };
+
+   if( reg.type === 'object') {
+     me.master.writeObject( reg.addr, reg.value, callback );
+
+    }
+    else {
+      
+      //console.log( 'writing ' + reg.length + ' registers to 0x' + reg.addr.toString(16), 'buf: ', reg.toBuffer() );
+
+      me.master.writeMultipleRegisters( reg.addr, reg.toBuffer(), callback );
     }
 
   });
@@ -436,7 +486,7 @@ Port.prototype.read = function( item ) {
   // hold an array of promises, one for each device query
   var list = buildRegisterList( item, me.readRegister.bind(this) );
 
-  console.log( 'Reading ' +  list.length + ' registers');
+  //console.log( 'Reading ' +  list.length + ' registers');
 
   // if only one item, return a single promise (resolves to a Register)
   // If multiple registers, the promise resolves to an array of Registers
@@ -451,41 +501,38 @@ Port.prototype.read = function( item ) {
     return BPromise.all( list );
   }
 
-  /*
+};
 
-  return new Promise(function(resolve, reject){
 
-    var callback = {
-      onComplete: function(err, response ) {
+/**
+ * Writes registers to the slave
+ *
+ * @param {object} items
+  *
+ * @returns Promise instance that resolves when command is completed
+ */
+Port.prototype.write = function( item ) {
 
-        if( response && response.exceptionCode ) {
-          // i'm not sure how to catch exception responses from the slave in a better way than this
-          err = new Error( 'Exception ' + response.exceptionCode );
-        }
-        if( err ) {
-          reject( err );
-        }
-        else {
-          item.fromBuffer( response.values );
-          resolve( item );
-        }
-      },
-      onError: function( err ) {
-        reject( err );
-      }
-    }
+  var me = this;
 
-    if( item.type === 'object') {
-     me.master.readObject( item.addr, callback );
+  // hold an array of promises, one for each device query
+  var list = buildRegisterList( item, me.writeRegister.bind(this) );
 
-    }
-    else {
+  console.log( 'Writing ' +  list.length + ' registers');
 
-     me.master.readHoldingRegisters( item.addr, item.length, callback );
-    }
+  // if only one item, return a single promise (resolves to a Register)
+  // If multiple registers, the promise resolves to an array of Registers
+  // if no items to read, the promise rejects immediately
+  if( list.length === 1 ) {
+    return  list[0];
+  }
+  else if( list.length === 0 ) {
+    return  BPromise.reject( 'No Registers to write');
+  }
+  else {
+    return BPromise.all( list );
+  }
 
-  });
-  */
 };
 
 
@@ -533,6 +580,7 @@ Port.prototype.readConfig = function() {
   *
  * @returns Promise instance that resolves when command is completed
  */
+/*
 Port.prototype.write = function( item, value ) {
 
   var me = this;
@@ -562,6 +610,7 @@ Port.prototype.write = function( item, value ) {
 
   });
 };
+*/
 
 /**
  * Resets the device
@@ -621,13 +670,15 @@ Port.prototype.createMap = function( productId ) {
       Map = require('./lib/map/cs1108_default');
       break;
 
-    case 0x00000000:
-    case 0x81000000:
+    //case 0x00000000:
+    //case 0x81000000:
+    //case 0x00001108:
+    default:
       Map = require('./lib/map/cs8100_default');
       break;
 
-    default:
-      return null;
+    //default:
+    //  return null;
 
   }
 

@@ -74,6 +74,40 @@ config.master.transport.connection.serialPort = serialport;
 // Create the MODBUS master using the supplied options (and serial port instance)
 var controller = new Controller( config );
 
+
+/**
+ * Zero pads a number (on the left) to a specified length
+ *
+ * @param  {number} number the number to be padded
+ * @param  {number} length number of digits to return
+ * @return {string}        zero-padded number
+ */
+function zeroPad( number, length ) {
+  var pad = new Array(length + 1).join( '0' );
+
+  return (pad+number).slice(-pad.length);
+}
+
+
+function printBuffer( buf, start ) {
+
+	//var offset = start % 16;
+
+	for( var i = 0; i < buf.length/2; i++ ) {
+		if( i%16 === 0 ) {
+			var addr = i+start;
+			process.stdout.write( '\r\n' + zeroPad(addr.toString(16),2) + ':' );
+
+		}
+
+		process.stdout.write( ' ' + zeroPad(buf[i*2+1].toString(16),2) );
+	}
+
+	process.stdout.write('\r\n');
+}
+
+
+
 // When the serial port is opened, the controller will emit a 'connected' event
 controller.on('connected', function() {
 
@@ -90,51 +124,78 @@ controller.on('connected', function() {
 			' Serial# ' + result.serialNumber  );
 
 
-		var map = controller.createMap( result.productId );
+		controller.master.readHoldingRegisters( 0x0300, 64, function(err, response ) {
+
+      if( response && response.exceptionCode ) {
+        // i'm not sure how to catch exception responses from the slave in a better way than this
+        throw new Error( 'Exception ' + response.exceptionCode );
+      }
+      if( err ) {
+        throw( err );
+      }
+      else {
+
+        printBuffer( response.values, 0 );
+
+				
+      }
+     });
+			
+		controller.master.readHoldingRegisters( 0x0300+64, 64, function(err, response ) {
+
+      if( response && response.exceptionCode ) {
+        // i'm not sure how to catch exception responses from the slave in a better way than this
+        throw new Error( 'Exception ' + response.exceptionCode );
+      }
+      if( err ) {
+        throw( err );
+      }
+      else {
+
+        printBuffer( response.values, 64 );
+
+				
+      }
+    });
 		
-		// Iterate through the entire map and read all the values
-		controller.read( map.eeprom )
 
-		.then( function( result ) {
+		controller.master.readHoldingRegisters( 0x0300+128, 64, function(err, response ) {
 
-			result.forEach( function( reg ) {
+      if( response && response.exceptionCode ) {
+        // i'm not sure how to catch exception responses from the slave in a better way than this
+        throw new Error( 'Exception ' + response.exceptionCode );
+      }
+      if( err ) {
+        throw( err );
+      }
+      else {
 
-				map.fromRegister( reg );
-				//console.log( reg.title + ': ', reg.format() );
-				//console.log( reg.title + ': ', reg.value );
-			});
+        printBuffer( response.values, 128 );
 
-			console.log( 'Deadband: ', map.config.throttle.deadband.format() );
-			
+				
+      }
+    });
+		
+		controller.master.readHoldingRegisters( 0x0300+192, 63, function(err, response ) {
 
-			
-		})
-		/*
-		.then( function() {
+      if( response && response.exceptionCode ) {
+        // i'm not sure how to catch exception responses from the slave in a better way than this
+        throw new Error( 'Exception ' + response.exceptionCode );
+      }
+      if( err ) {
+        throw( err );
+      }
+      else {
 
-			return controller.read( map.ramConfig );
-			
-		})
-		.then( function( result ) {
+        printBuffer( response.values, 192 );
 
-			result.forEach( function( reg ) {
-				console.log( reg.title + ': ', reg.format() );
-			});
-			
+				process.exit(0);
+      }
+    });
 
-			
-		})
-		*/
-		.then( function() {
+	});
 
-			// exit the program
-			process.exit(0);
-		})
-		.catch( errorExit );
-
-	})
-	.catch( errorExit );
-
+	
 });
 
 

@@ -34,7 +34,7 @@ var config = {
 	// Configuration for the MODBUS master's behavior
 	master : {
 			transport: {
-				type: "rtu",
+				type: 'rtu',
 				eofTimeout: 200,
 				
 				connection: {
