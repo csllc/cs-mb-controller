@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Example program that connects to a serial port and retrieves the SLAVE ID.
+ * Example program that connects to a bluetooth serial port and retrieves the SLAVE ID.
  * You will need to modify the config object below; at a minimim, set the serial port name 
  * to the correct value for your system. 
  *
@@ -20,15 +20,6 @@ var config = {
 	// BLE port configuration options
 	ble : {
 
-		// Modify name to your serial port identifier (eg COM2)
-		name : '/dev/cu.usbserial-FTYXQCAR',
-
-		// set to the correct baud rate for your device.
-		// Other serial port options are available; see
-		// https://github.com/EmergingTechnologyAdvisors/node-serialport#serialportopenoptions--object
-		'options' : {
-			'baudrate': 115200
-		}
 	},
 
 	// Configuration for the MODBUS master's behavior
