@@ -666,9 +666,9 @@ Port.prototype.createMap = function( productId ) {
   var Map;
 
   switch( productId ){
-    case 0x11080000:
-      Map = require('./lib/map/cs1108_default');
-      break;
+    //case 0x11080000:
+      //Map = require('./lib/map/cs1108_default');
+     // break;
 
     //case 0x00000000:
     //case 0x81000000:
