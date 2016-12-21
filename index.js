@@ -15,14 +15,8 @@ var util = require('util');
 // Node event emitter module
 var EventEmitter = require('events').EventEmitter;
 
-// Module which manages the serial port
-var serialPortFactory = require('serialport');
-
 // Include the MODBUS master
 var Modbus = require('cs-modbus');
-
-// assertion library
-var chai = require('chai');
 
 // Promise library
 var BPromise = require('bluebird');
