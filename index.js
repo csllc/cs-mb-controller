@@ -50,6 +50,11 @@ function zeroPad( number, length ) {
 function Port ( options ) {
   var me = this;
 
+  // expose these constructors, mainly for browserified version
+  me.Buffer = Buffer;
+  me.BufferReader = buffers.BufferReader;
+  me.BufferBuilder = buffers.BufferBuilder;
+
   // for debugging
   BPromise.longStackTraces();
 
