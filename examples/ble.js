@@ -13,6 +13,9 @@ var Controller = require('../index');
 // Module which provides BLE interfaces
 var BlePort = require('./ble_serial');
 
+// set stdin to get keypresses
+//process.stdin.setRawMode(true);    
+
 
 // Configuration defaults
 var config = {
@@ -71,8 +74,8 @@ bleport.on('stateChange', function(state) {
       // stop after the first found, we just connect to the first one in this demo
       bleport.stopScanning();
 
-      console.log( peripheral );
-      console.log( 'Found ' + peripheral.advertisement.localName );
+      //console.log( peripheral );
+      console.log( 'Found ' + peripheral.advertisement.localName + '(' + peripheral.address + ')' );
 
       bleport.connect( peripheral )
       .then( function() {
@@ -124,6 +127,12 @@ var controller = new Controller( config );
 // When the serial port is opened, the controller will emit a 'connected' event
 controller.on('connected', function() {
 
+  var buf = new Buffer( 100 );
+      buf.fill( 0x01 );
+  controller.master.writeMultipleRegisters( 0, buf, function( result ) {
+        console.log( result);
+      } );
+
 	// so we now request the slaveId from the device
 	controller.readId()
 
@@ -137,6 +146,9 @@ controller.on('connected', function() {
 
     var map = controller.createMap( result.productId );
 
+
+
+
     // Iterate through the entire map and read all the values
     controller.read( map.config )
 
@@ -148,7 +160,7 @@ controller.on('connected', function() {
     })
     .then( function() {
 
-      // leave things running to monitor status
+      
 
 
       // exit the program
@@ -160,6 +172,43 @@ controller.on('connected', function() {
 
 
 
+});
+
+// catch keypresses and act on them
+
+process.stdin.on('keypress', function (chunk, key) {
+  process.stdout.write('Get Chunk: ' + chunk + '\n');
+
+  switch( key ) {
+    case 'x':
+      process.exit();
+      break;
+
+    case 'i':
+      controller.readId()
+      .then( function( result ) {
+        console.log( result );
+      });
+      break;
+
+    case 'w': {
+      var buf = new Buffer( 500 );
+      buf.fill( 0x01 );
+      controller.master.writeMultipleRegisters( 0, buf, function( result ) {
+        console.log( result);
+      } );
+      
+      break;
+    }
+
+    case 'c':
+      if( key.ctrl ) {
+        process.exit();
+      }
+      break;
+
+
+  }    
 });
 
 
